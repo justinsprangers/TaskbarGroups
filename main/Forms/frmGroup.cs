@@ -139,6 +139,156 @@ namespace client.Forms
                .SetValue(pnlDeleteConfo, true, null);
 
             newExt = imageExt.Concat(specialImageExt).ToArray();
+
+            addStartMenuImportLink();
+        }
+
+        //--------------------------------------
+        // START MENU FOLDER IMPORT
+        //--------------------------------------
+
+        // The "All apps" list merges these two folders, so a Start menu folder can have shortcuts in both
+        private static readonly String[] startMenuRoots = new String[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.Programs),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonPrograms)
+        };
+
+        // Adds an "or import a Start menu folder" link under "Add new shortcut"
+        private void addStartMenuImportLink()
+        {
+            LinkLabel lnkImport = new LinkLabel
+            {
+                Text = "or import a Start menu folder",
+                AutoSize = true,
+                BackColor = Color.Transparent,
+                Font = new Font("Segoe UI", 8.25F),
+                LinkColor = Color.FromArgb(160, 160, 160),
+                ActiveLinkColor = Color.White,
+                LinkBehavior = LinkBehavior.HoverUnderline
+            };
+            lnkImport.LinkClicked += (s, ev) => importStartMenuFolder();
+            pnlAddShortcut.Controls.Add(lnkImport);
+            lnkImport.Location = new Point((pnlAddShortcut.Width - lnkImport.PreferredWidth) / 2, lblAddShortcut.Bottom + 2);
+        }
+
+        // Let the user pick a Start menu folder and add every app in it to this group
+        private void importStartMenuFolder()
+        {
+            resetSelection();
+            lblErrorShortcut.Visible = false;
+
+            String folder;
+            using (CommonOpenFileDialog dialog = new CommonOpenFileDialog
+            {
+                Title = "Pick a Start menu folder to import",
+                IsFolderPicker = true,
+                EnsurePathExists = true,
+                InitialDirectory = startMenuRoots[0]
+            })
+            {
+                foreach (String root in startMenuRoots)
+                {
+                    try
+                    {
+                        if (Directory.Exists(root))
+                            dialog.AddPlace(root, FileDialogAddPlaceLocation.Top);
+                    }
+                    catch (Exception) { } // Shortcuts in the sidebar are a convenience only
+                }
+
+                if (dialog.ShowDialog() != CommonFileDialogResult.Ok)
+                    return;
+                folder = dialog.FileName;
+            }
+            this.Focus();
+
+            List<String> files = getStartMenuFolderFiles(folder);
+            HashSet<String> existing = new HashSet<String>(Category.ShortcutList.Select(p => p.FilePath), StringComparer.OrdinalIgnoreCase);
+            int added = 0;
+            int skipped = 0;
+
+            foreach (String file in files)
+            {
+                if (existing.Contains(expandEnvironment(file)))
+                    continue;
+
+                if (Category.ShortcutList.Count >= 20)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                addShortcut(file);
+                added++;
+            }
+
+            // Name the group after the folder if it hasn't been named yet
+            if (txtGroupName.Text == "Name the new group..." || txtGroupName.Text == "")
+            {
+                String name = Regex.Replace(Path.GetFileName(folder), "[^0-9a-zA-Z ]", "").Trim();
+                if (name != "")
+                    txtGroupName.Text = name;
+            }
+
+            if (files.Count == 0)
+                lblErrorShortcut.Text = "No apps found in that folder";
+            else if (skipped > 0)
+                lblErrorShortcut.Text = "Max 20 shortcuts; " + skipped + " not added";
+
+            if (files.Count == 0 || skipped > 0)
+            {
+                lblErrorShortcut.BringToFront();
+                lblErrorShortcut.Visible = true;
+            }
+
+            if (added > 0 && pnlShortcuts.Controls.Count != 0)
+                pnlShortcuts.ScrollControlIntoView(pnlShortcuts.Controls[0]);
+        }
+
+        // Shortcuts directly inside a Start menu folder, merged across the user and all-users copies, sorted by name.
+        // Uninstall shortcuts are skipped.
+        private List<String> getStartMenuFolderFiles(String folder)
+        {
+            List<String> folders = new List<String> { folder };
+
+            // If the folder is under one Start menu root, also look in the same folder under the other root
+            String full = Path.GetFullPath(folder).TrimEnd('\\');
+            foreach (String root in startMenuRoots)
+            {
+                String rootFull = Path.GetFullPath(root).TrimEnd('\\');
+                if (full.StartsWith(rootFull + "\\", StringComparison.OrdinalIgnoreCase))
+                {
+                    String relative = full.Substring(rootFull.Length + 1);
+                    foreach (String other in startMenuRoots)
+                    {
+                        String twin = Path.Combine(other, relative);
+                        if (Directory.Exists(twin) && !folders.Contains(twin, StringComparer.OrdinalIgnoreCase))
+                            folders.Add(twin);
+                    }
+                    break;
+                }
+            }
+
+            Dictionary<String, String> byName = new Dictionary<String, String>(StringComparer.OrdinalIgnoreCase);
+            foreach (String dir in folders)
+            {
+                foreach (String file in Directory.GetFiles(dir))
+                {
+                    if (!extensionExt.Contains(Path.GetExtension(file).ToLower()))
+                        continue;
+
+                    String name = Path.GetFileNameWithoutExtension(file);
+                    if (name.IndexOf("uninstall", StringComparison.OrdinalIgnoreCase) >= 0)
+                        continue;
+
+                    // Same shortcut name in both copies: keep the first (user copy wins)
+                    if (!byName.ContainsKey(name))
+                        byName[name] = file;
+                }
+            }
+
+            return byName.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase).Select(kv => kv.Value).ToList();
         }
 
         //--------------------------------------

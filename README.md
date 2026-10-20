@@ -7,9 +7,15 @@ The original project's README is in `README.upstream.md`. MIT License (see `LICE
 ## Just using it
 I don't need to build anything to use it. Download `Taskbar.Groups.exe` from the [releases page](https://github.com/PikeNote/taskbar-groups-pike-beta/releases), put it in a folder that stays put, run it, create a group, then right-click the group's shortcut → **Pin to taskbar**.
 
+## My changes
+- **Import a Start menu folder.** In the group editor, click **"or import a Start menu folder"** under *Add new shortcut*. Pick a folder, and every app in it is added to the group. If the group has no name yet, it's named after the folder.
+  - This works with folders in the Start menu's **All apps** list. Those are real folders in `%APPDATA%\Microsoft\Windows\Start Menu\Programs` and `C:\ProgramData\Microsoft\Windows\Start Menu\Programs`, and both appear in the picker's sidebar. It doesn't work with folders made in the **Pinned** section, because Windows doesn't store those as real folders.
+  - To make a custom group managed from the Start menu, create a folder under `%APPDATA%\Microsoft\Windows\Start Menu\Programs` and put app shortcuts in it.
+  - Uninstall shortcuts are skipped, and the group's 20-app limit still applies.
+
 ## Building my own version
 1. Install **Visual Studio Community** (free) with the **.NET desktop development** workload. That includes .NET Framework 4.7.2.
-2. Open `TaskbarGroups.sln`.
+2. Open `TaskbarGroups.sln`. If references show as missing, right-click the solution → **Restore NuGet Packages**.
 3. Set the configuration to **Release**, then **Build → Build Solution**.
 4. The output goes to `main\bin\Release\` (the editor app) and `backgroundClient\bin\Release\` (the pop-up). Build output is gitignored.
 
