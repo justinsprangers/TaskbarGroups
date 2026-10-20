@@ -17,7 +17,9 @@ I don't need to build anything to use it. Download `Taskbar.Groups.exe` from the
 1. Install **Visual Studio Community** (free) with the **.NET desktop development** workload. That includes .NET Framework 4.7.2.
 2. Open `TaskbarGroups.sln`. If references show as missing, right-click the solution → **Restore NuGet Packages**.
 3. Set the configuration to **Release**, then **Build → Build Solution**.
-4. The output goes to `main\bin\Release\` (the editor app) and `backgroundClient\bin\Release\` (the pop-up). Build output is gitignored.
+4. The app is `main\bin\Release\Taskbar Groups.exe`. The pop-up helper builds into `main\Resources\` and is packed inside that exe. Build output is gitignored.
+   - Command-line alternative: `"C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe" TaskbarGroups.sln /restore /p:Configuration=Release /p:RestorePackagesConfig=true`
+   - If the build complains about "mark of the web", unblock the files once in PowerShell: `Get-ChildItem C:\Claude\TaskbarGroups -Recurse -File | Unblock-File`
 
 ## Layout
 - `main/`: the editor where you create and edit groups (`client.csproj`).
