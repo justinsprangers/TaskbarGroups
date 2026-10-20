@@ -33,6 +33,14 @@ namespace client.Classes
 
             XmlNamespaceManager appManifestNamespace = new XmlNamespaceManager(new NameTable());
             appManifestNamespace.AddNamespace("sm", "http://schemas.microsoft.com/appx/manifest/foundation/windows10");
+            appManifestNamespace.AddNamespace("uap", "http://schemas.microsoft.com/appx/manifest/uap/windows10");
+
+            // Prefer the large app-list icon: the package logo (StoreLogo) is often a small icon padded inside a big image
+            String appListIcon = findAppListIcon(appManifest, appManifestNamespace, appPath);
+            if (appListIcon != null)
+            {
+                return getLogo(appListIcon, file);
+            }
 
             String logoLocation = (appManifest.SelectSingleNode("/sm:Package/sm:Properties/sm:Logo", appManifestNamespace).InnerText).Replace("\\", @"\");
             String logoPNG = "";
@@ -77,6 +85,36 @@ namespace client.Classes
             {
                 return Icon.ExtractAssociatedIcon(file).ToBitmap();
             }
+        }
+
+        // Largest variant of the app's Square44x44Logo (the icon used in the Start menu's app list), or null if none
+        private static String findAppListIcon(XmlDocument appManifest, XmlNamespaceManager ns, String appPath)
+        {
+            try
+            {
+                XmlNode visual = appManifest.SelectSingleNode("/sm:Package/sm:Applications/sm:Application/uap:VisualElements", ns);
+                XmlNode logoAttr = visual?.Attributes?.GetNamedItem("Square44x44Logo");
+                if (logoAttr == null)
+                    return null;
+
+                String logoPath = Path.Combine(appPath, logoAttr.InnerText);
+                DirectoryInfo dir = new DirectoryInfo(Path.GetDirectoryName(logoPath));
+                if (!dir.Exists)
+                    return null;
+                String baseName = Path.GetFileNameWithoutExtension(logoPath);
+
+                // Unplated = no tile background or padding; checked first
+                String[] keysToTest = { ".targetsize-256_altform-unplated", ".targetsize-256", ".targetsize-48_altform-unplated", ".targetsize-48" };
+                foreach (String key in keysToTest)
+                {
+                    FileInfo[] matches = dir.GetFiles(baseName + key + ".*");
+                    if (matches.Length != 0)
+                        return matches[0].FullName;
+                }
+            }
+            catch (Exception) { }
+
+            return null;
         }
 
         private static FileInfo[] getLogoFolder(String keyname, DirectoryInfo logoDirectory)

@@ -12,6 +12,9 @@ I don't need to build anything to use it. Download `Taskbar.Groups.exe` from the
   - This works with folders in the Start menu's **All apps** list. Those are real folders in `%APPDATA%\Microsoft\Windows\Start Menu\Programs` and `C:\ProgramData\Microsoft\Windows\Start Menu\Programs`, and both appear in the picker's sidebar. It doesn't work with folders made in the **Pinned** section, because Windows doesn't store those as real folders.
   - To make a custom group managed from the Start menu, create a folder under `%APPDATA%\Microsoft\Windows\Start Menu\Programs` and put app shortcuts in it.
   - Uninstall shortcuts are skipped, and the group's 20-app limit still applies.
+  - Store apps and installed websites (which have no `.exe`) work too. For a folder of those, make shortcuts that point to `shell:AppsFolder\<AppID>`. In PowerShell, `Get-StartApps` lists the app IDs.
+- **Fixed: crash when adding shortcuts on scaled displays** (Windows display scaling above 100%).
+- **Fixed: tiny icons for installed websites.** Store apps and installed websites now use their large Start menu icon instead of the padded Store logo. To pick up a fix like this for an existing group, delete the group and import it again, because the app keeps a saved copy of each icon.
 
 ## Building my own version
 1. Install **Visual Studio Community** (free) with the **.NET desktop development** workload. That includes .NET Framework 4.7.2.
