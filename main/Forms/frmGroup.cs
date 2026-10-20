@@ -210,7 +210,12 @@ namespace client.Forms
 
             foreach (String file in files)
             {
-                if (existing.Contains(expandEnvironment(file)))
+                // Store apps and installed websites have shortcuts that point to an app ID, not a file.
+                // Add those the same way as an app dragged in from the Apps folder.
+                String appId = getStartMenuAppId(file);
+                String key = appId ?? expandEnvironment(file);
+
+                if (existing.Contains(key))
                     continue;
 
                 if (Category.ShortcutList.Count >= 20)
@@ -219,7 +224,11 @@ namespace client.Forms
                     continue;
                 }
 
-                addShortcut(file);
+                if (appId != null)
+                    addShortcut(appId, true);
+                else
+                    addShortcut(file);
+                existing.Add(key);
                 added++;
             }
 
@@ -244,6 +253,23 @@ namespace client.Forms
 
             if (added > 0 && pnlShortcuts.Controls.Count != 0)
                 pnlShortcuts.ScrollControlIntoView(pnlShortcuts.Controls[0]);
+        }
+
+        // App ID (Ex. 4DF9E0F8.Netflix_mcm4njqhnhss8!Netflix.app) if the shortcut points to a packaged app; otherwise null
+        private static String getStartMenuAppId(String file)
+        {
+            if (Path.GetExtension(file).ToLower() != ".lnk")
+                return null;
+
+            try
+            {
+                String target = handleWindowsApp.GetLnkTarget(file)[0];
+                if (!String.IsNullOrEmpty(target) && target.Contains("!") && !target.Contains("\\"))
+                    return target;
+            }
+            catch (Exception) { }
+
+            return null;
         }
 
         // Shortcuts directly inside a Start menu folder, merged across the user and all-users copies, sorted by name.

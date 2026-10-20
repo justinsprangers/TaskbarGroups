@@ -230,7 +230,8 @@ namespace client.User_controls
         {
             txtShortcutName.Width = this.Width - (txtShortcutName.Bounds.Left) - (this.Width - pictureBox1.Bounds.Left);
             
-            if (!txtShortcutName.Focused)
+            // DPI scaling can resize the control inside the constructor, before Shortcut is assigned
+            if (Shortcut != null && Shortcut.name != null && !txtShortcutName.Focused)
             {
                 txtShortcutName.Text = Truncate(Shortcut.name, (int)Math.Floor(txtShortcutName.Width / characterWidth));
             }
